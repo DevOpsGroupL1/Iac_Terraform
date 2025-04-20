@@ -1,7 +1,7 @@
 #Create Key pair
 resource "aws_key_pair" "main" {
   key_name   = var.key_name
-  public_key = file("/home/hardarmyyy/swe-7302.pub")
+  public_key = file("public_key")
 }
 
 #Create Instances
