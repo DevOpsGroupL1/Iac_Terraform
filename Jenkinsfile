@@ -71,93 +71,93 @@ pipeline {
             }
         }
 
-        // stage('Terraform Validate') {
-        //     when {
-        //         branch 'PR-*'
-        //     }
+        stage('Terraform Validate') {
+            when {
+                branch 'PR-*'
+            }
 
-        //     steps {
-        //         script {
-        //             def terraformDirs = ['DB', 'EC2', 'VPC']
-        //             def parallelSteps = terraformDirs.collectEntries { dirName ->
-        //                 ["Validate ${dirName}": {
-        //                     dir("Iac_Terraform/${dirName}") {
-        //                         echo "Validating Terraform for ${repoName}/${dirName} repository."
-        //                         withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-        //                             sh 'terraform validate'
-        //                         }
-        //                     }
-        //                 }]
-        //             }
-        //             parallel parallelSteps
-        //         }
-        //     }
-        // }
+            steps {
+                script {
+                    def terraformDirs = ['DB', 'EC2', 'VPC']
+                    def parallelSteps = terraformDirs.collectEntries { dirName ->
+                        ["Validate ${dirName}": {
+                            dir("Iac_Terraform/${dirName}") {
+                                echo "Validating Terraform for ${repoName}/${dirName} repository."
+                                withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                                    sh 'terraform validate'
+                                }
+                            }
+                        }]
+                    }
+                    parallel parallelSteps
+                }
+            }
+        }
 
-        // stage('Terraform Plan') {
-        //     when {
-        //         branch 'PR-*'
-        //     }
+        stage('Terraform Plan') {
+            when {
+                branch 'PR-*'
+            }
 
-        //     steps {
-        //         script {
-        //             def terraformDirs = ['DB', 'EC2', 'VPC']
-        //             def parallelSteps = terraformDirs.collectEntries { dirName ->
-        //                 ["Plan ${dirName}": {
-        //                     dir("Iac_Terraform/${dirName}") {
-        //                         echo "Creating Terraform plan for ${repoName}/${dirName} repository."
-        //                         withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-        //                             sh 'terraform plan -out=tfplan'
-        //                         }
-        //                     }
-        //                 }]
-        //             }
-        //             parallel parallelSteps
+            steps {
+                script {
+                    def terraformDirs = ['DB', 'EC2', 'VPC']
+                    def parallelSteps = terraformDirs.collectEntries { dirName ->
+                        ["Plan ${dirName}": {
+                            dir("Iac_Terraform/${dirName}") {
+                                echo "Creating Terraform plan for ${repoName}/${dirName} repository."
+                                withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                                    sh 'terraform plan -out=tfplan'
+                                }
+                            }
+                        }]
+                    }
+                    parallel parallelSteps
 
-        //             echo "Terraform plan created for ${repoName} repository."
-        //             echo "Storing Terraform plan in the workspace."
-        //             // Archive the Terraform plan for later use
-        //             archiveArtifacts artifacts: 'Iac_Terraform/*/tfplan', fingerprint: true
-        //         }
-        //     }
-        // }
+                    echo "Terraform plan created for ${repoName} repository."
+                    echo "Storing Terraform plan in the workspace."
+                    // Archive the Terraform plan for later use
+                    archiveArtifacts artifacts: 'Iac_Terraform/*/tfplan', fingerprint: true
+                }
+            }
+        }
 
-        // stage('Terraform Plan Approval') {
-        //     when {
-        //         expression {
-        //             return branchName == 'staging'
-        //         }
-        //     }
-        //     steps {
-        //         input message: 'Approve Terraform Plan?'
-        //     }
-        // }
+        stage('Terraform Plan Approval') {
+            when {
+                expression {
+                    return branchName == 'staging'
+                }
+            }
+            steps {
+                input message: 'Approve Terraform Plan?'
+            }
+        }
 
-        // stage('Terraform Apply') {
-        //     when {
-        //         expression {
-        //             return branchName == 'staging'
-        //         }
-        //     }
-        //     steps {
-        //         script {
-        //             def terraformDirs = ['DB', 'EC2', 'VPC']
-        //             def parallelSteps = terraformDirs.collectEntries { dirName ->
-        //                 ["Apply ${dirName}": {
-        //                     dir("Iac_Terraform/${dirName}") {
-        //                         echo "Applying Terraform for ${repoName}/${dirName} repository."
-        //                         withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-        //                             sh 'terraform apply -auto-approve'
-        //                         }
-        //                     }
-        //                 }]
-        //             }
-        //             parallel parallelSteps
+        stage('Terraform Apply') {
+            when {
+                expression {
+                    return branchName == 'staging'
+                }
+            }
+            steps {
+                script {
+                    def terraformDirs = ['DB', 'EC2', 'VPC']
+                    def parallelSteps = terraformDirs.collectEntries { dirName ->
+                        ["Apply ${dirName}": {
+                            dir("Iac_Terraform/${dirName}") {
+                                echo "Applying Terraform for ${repoName}/${dirName} repository."
+                                withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                                    sh 'terraform apply -auto-approve'
+                                }
+                            }
+                        }]
+                    }
+                    parallel parallelSteps
 
-        //             echo "Terraform apply completed for ${repoName} repository."
-        //         }
-        //     }
-        // }
+                    echo "Terraform apply completed for ${repoName} repository."
+                }
+            }
+        }
     }
 
     post {
