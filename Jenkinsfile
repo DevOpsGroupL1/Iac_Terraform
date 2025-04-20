@@ -18,8 +18,8 @@ pipeline {
         stage('check s3 bucket') {
             steps {
                 script {
-                    echo "Checking if the S3 bucket exists in the region ${aws-region}."
-                    sh "aws s3 ls --region ${aws-region}"
+                    echo "Checking if the S3 bucket exists in the region ${env.AWS_REGION}."
+                    sh "aws s3 ls --region ${env.AWS_REGION}"
                 }             
             }
         }
