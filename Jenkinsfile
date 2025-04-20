@@ -16,13 +16,11 @@ pipeline {
     stages {
 
         stage('check s3 bucket') {
-            echo "Checking if the S3 bucket exists in the region ${aws-region}."
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials', usernameVariable:'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    script {
-                        sh "aws s3 list-buckets --region ${aws-region}"
-                    }
-                }              
+                script {
+                    echo "Checking if the S3 bucket exists in the region ${aws-region}."
+                    sh "aws s3 ls --region ${aws-region}"
+                }             
             }
         }
 
