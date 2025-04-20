@@ -85,8 +85,8 @@ pipeline {
                                 echo "Validating Terraform for ${repoName}/${dirName} repository."
                                 withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'),
                                                 file(credentialsId: "terraform${dirName.toLowerCase()}.tfvars", variable: 'AWS_TF_VARS')]) {
-                                    sh "cp ${AWS_TF_VARS} terraform.tfvars"
-                                    sh "terraform validate -var-file=terraform.tfvars"
+                                    sh 'cp ${AWS_TF_VARS} terraform.tfvars'
+                                    sh "terraform validate"
                                 }
                             }
                         }]
@@ -110,7 +110,7 @@ pipeline {
                                 echo "Creating Terraform plan for ${repoName}/${dirName} repository."
                                 withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'),
                                                 file(credentialsId: "terraform${dirName.toLowerCase()}.tfvars", variable: 'AWS_TF_VARS')]) {
-                                    sh "cp ${AWS_TF_VARS} terraform.tfvars"
+                                    sh 'cp ${AWS_TF_VARS} terraform.tfvars'
                                     sh 'terraform plan -var-file=terraform.tfvars -out=tfplan'
                                 }
                             }
@@ -152,7 +152,7 @@ pipeline {
                                 echo "Applying Terraform for ${repoName}/${dirName} repository."
                                 withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'),
                                                 file(credentialsId: "terraform${dirName.toLowerCase()}.tfvars", variable: 'AWS_TF_VARS')]) {
-                                    sh "cp ${AWS_TF_VARS} terraform.tfvars"
+                                    sh 'cp ${AWS_TF_VARS} terraform.tfvars'
                                     sh 'terraform apply -var-file=terraform.tfvars -auto-approve'
                                 }
                             }
@@ -170,21 +170,21 @@ pipeline {
 
         success {
             script {
-                echo "Terraform apply completed successfully for ${repoName} repository."
+                echo "Infrastructure completed successfully for ${repoName} repository."
                 cleanWs()
             }
         }
 
         failure {
             script {
-                echo "Terraform apply failed for ${repoName} repository."
+                echo "Infrastructure failed for ${repoName} repository."
                 cleanWs()
             }
         }
 
         aborted {
             script {
-                echo "Terraform apply was aborted for ${repoName} repository."
+                echo "Infrastructure was aborted for ${repoName} repository."
                 cleanWs()
             }
         }
