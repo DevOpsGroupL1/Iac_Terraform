@@ -15,74 +15,81 @@ pipeline {
     
     stages {
 
-        stage('check s3 bucket') {
+        stage('Initialize variables') {
             steps {
                 script {
-                    echo "Checking if the S3 bucket exists in the region ${env.AWS_REGION}."
-                    withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                        sh "aws s3 ls --region ${env.AWS_REGION}"
-                    }
-                }             
+                    repoName = env.GIT_URL?.tokenize('/').last()?.replace('.git', '')
+                    branchName = env.GIT_BRANCH?.replaceFirst(/^origin\//, '')
+                }
             }
         }
 
-        // stage('Initialize variables') {
-        //     steps {
-        //         script {
-        //             repoName = env.GIT_URL?.tokenize('/').last()?.replace('.git', '')
-        //             branchName = env.GIT_BRANCH?.replaceFirst(/^origin\//, '')
-        //         }
-        //     }
-        // }
+        stage('Checkout Repositories') {
+            when {
+                anyOf {
+                    branch 'PR-*'
+                    expression {
+                        return branchName == 'staging'
+                    }
+                }
+            }
+            steps {
+                script {
+                    echo "Checking out the source code from the repository: ${repoName} - branch: ${branchName}"
+                    dir('Iac_Terraform') {
+                        checkout scm
+                    }  
+                }
+            }
+        }
 
-        // stage('Checkout Repositories') {
-        //     when {
-        //         anyOf {
-        //             branch 'PR-*'
-        //             expression {
-        //                 return branchName == 'staging'
-        //             }
-        //         }
-        //     }
-        //     steps {
-        //         script {
-        //             echo "Checking out the source code from the repository: ${repoName} - branch: ${branchName}"
-        //             dir('Iac_Terraform') {
-        //                 checkout scm
-        //             }  
-        //         }
-        //     }
-        // }
+        stage('Initialize Terraform') {
+            when {
+                anyOf {
+                    branch 'PR-*'
+                    expression {
+                        return branchName == 'staging'
+                    }
+                }
+            }
 
-        // stage('Initialize Terraform') {
+            steps {
+                script {
+                    def terraformDirs = ['DB', 'EC2', 'VPC']
+                    def parallelSteps = terraformDirs.collectEntries { dirName ->
+                        ["Initialize ${dirName}": {
+                            dir("Iac_Terraform/${dirName}") {
+                                echo "Initializing Terraform for ${repoName}/${dirName} repository."
+                                withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                                    sh 'terraform init --backend-config=../backend.hcl'
+                                }
+                            }
+                        }]
+                    }
+                    parallel parallelSteps
+                }
+            }
+        }
+
+        // stage('Terraform Validate') {
         //     when {
-        //         anyOf {
-        //             branch 'PR-*'
-        //             expression {
-        //                 return branchName == 'staging'
-        //             }
-        //         }
+        //         branch 'PR-*'
         //     }
+
         //     steps {
         //         script {
-        //             dir('Iac_Terraform/DB') {
-        //                 echo "Initializing Terraform for ${repoName}/DB repository."
-        //                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-        //                     sh 'terraform init --backend-config=../backend.hcl'
-        //                 }                      
+        //             def terraformDirs = ['DB', 'EC2', 'VPC']
+        //             def parallelSteps = terraformDirs.collectEntries { dirName ->
+        //                 ["Validate ${dirName}": {
+        //                     dir("Iac_Terraform/${dirName}") {
+        //                         echo "Validating Terraform for ${repoName}/${dirName} repository."
+        //                         withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+        //                             sh 'terraform validate'
+        //                         }
+        //                     }
+        //                 }]
         //             }
-        //             dir('Iac_Terraform/EC2') {
-        //                 echo "Initializing Terraform for ${repoName}/EC2 repository."
-        //                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-        //                     sh 'terraform init --backend-config=../backend.hcl'
-        //                 }                      
-        //             }
-        //             dir('Iac_Terraform/VPC') {
-        //                 echo "Initializing Terraform for ${repoName}/VPC repository."
-        //                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-        //                     sh 'terraform init --backend-config=../backend.hcl'
-        //                 }
-        //             }
+        //             parallel parallelSteps
         //         }
         //     }
         // }
@@ -91,30 +98,38 @@ pipeline {
         //     when {
         //         branch 'PR-*'
         //     }
+
         //     steps {
         //         script {
-        //             // Generate a Terraform plan
-        //             dir('Iac_Terraform/DB') {
-        //                 echo "Generating Terraform plan for ${repoName}/DB repository."
-        //                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-        //                     sh 'terraform plan -out=tfplan'
-        //                 }
+        //             def terraformDirs = ['DB', 'EC2', 'VPC']
+        //             def parallelSteps = terraformDirs.collectEntries { dirName ->
+        //                 ["Plan ${dirName}": {
+        //                     dir("Iac_Terraform/${dirName}") {
+        //                         echo "Creating Terraform plan for ${repoName}/${dirName} repository."
+        //                         withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+        //                             sh 'terraform plan -out=tfplan'
+        //                         }
+        //                     }
+        //                 }]
         //             }
-        //             dir('Iac_Terraform/EC2') {
-        //                 echo "Generating Terraform plan for ${repoName}/EC2 repository."
-        //                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-        //                     sh 'terraform plan -out=tfplan'
-        //                 }
-        //             }
-        //             dir('Iac_Terraform/VPC') {
-        //                 echo "Generating Terraform plan for ${repoName}/VPC repository."
-        //                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-        //                     sh 'terraform plan -out=tfplan'
-        //                 }
-        //             }
+        //             parallel parallelSteps
+
+        //             echo "Terraform plan created for ${repoName} repository."
+        //             echo "Storing Terraform plan in the workspace."
         //             // Archive the Terraform plan for later use
         //             archiveArtifacts artifacts: 'Iac_Terraform/*/tfplan', fingerprint: true
         //         }
+        //     }
+        // }
+
+        // stage('Terraform Plan Approval') {
+        //     when {
+        //         expression {
+        //             return branchName == 'staging'
+        //         }
+        //     }
+        //     steps {
+        //         input message: 'Approve Terraform Plan?'
         //     }
         // }
 
@@ -126,53 +141,45 @@ pipeline {
         //     }
         //     steps {
         //         script {
-        //             // Apply the Terraform plan
-        //             dir('Iac_Terraform/DB') {
-        //                 echo "Applying Terraform plan for ${repoName}/DB repository."
-        //                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-        //                     sh 'terraform apply -auto-approve'
-        //                 }
+        //             def terraformDirs = ['DB', 'EC2', 'VPC']
+        //             def parallelSteps = terraformDirs.collectEntries { dirName ->
+        //                 ["Apply ${dirName}": {
+        //                     dir("Iac_Terraform/${dirName}") {
+        //                         echo "Applying Terraform for ${repoName}/${dirName} repository."
+        //                         withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+        //                             sh 'terraform apply -auto-approve'
+        //                         }
+        //                     }
+        //                 }]
         //             }
-        //             dir('Iac_Terraform/EC2') {
-        //                 echo "Applying Terraform plan for ${repoName}/EC2 repository."
-        //                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-        //                     sh 'terraform apply -auto-approve'
-        //                 }
-        //             }
-        //             dir('Iac_Terraform/VPC') {
-        //                 echo "Applying Terraform plan for ${repoName}/VPC repository."
-        //                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-        //                     sh 'terraform apply -auto-approve'
-        //                 }
-        //             }
+        //             parallel parallelSteps
+
+        //             echo "Terraform apply completed for ${repoName} repository."
         //         }
         //     }
         // }
     }
 
     post {
-        always {
-            script {
-                echo "Cleaning up workspace for ${repoName} repository."
-                cleanWs()
-            }
-        }
 
         success {
             script {
                 echo "Terraform apply completed successfully for ${repoName} repository."
+                cleanWs()
             }
         }
 
         failure {
             script {
                 echo "Terraform apply failed for ${repoName} repository."
+                cleanWs()
             }
         }
 
-        unstable {
+        aborted {
             script {
-                echo "Terraform apply was unstable for ${repoName} repository."
+                echo "Terraform apply was aborted for ${repoName} repository."
+                cleanWs()
             }
         }
     }
