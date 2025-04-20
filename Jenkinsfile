@@ -19,7 +19,9 @@ pipeline {
             steps {
                 script {
                     echo "Checking if the S3 bucket exists in the region ${env.AWS_REGION}."
-                    sh "aws s3 ls --region ${env.AWS_REGION}"
+                    withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                        sh "aws s3 ls --region ${env.AWS_REGION}"
+                    }
                 }             
             }
         }
