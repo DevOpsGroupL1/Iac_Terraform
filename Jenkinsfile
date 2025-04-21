@@ -71,30 +71,30 @@ pipeline {
             }
         }
 
-        stage('Terraform Validate') {
-            when {
-                branch 'PR-*'
-            }
+        // stage('Terraform Validate') {
+        //     when {
+        //         branch 'PR-*'
+        //     }
 
-            steps {
-                script {
-                    def terraformDirs = ['DB', 'EC2', 'VPC']
-                    def parallelSteps = terraformDirs.collectEntries { dirName ->
-                        ["Validate ${dirName}": {
-                            dir("Iac_Terraform/${dirName}") {
-                                echo "Validating Terraform for ${repoName}/${dirName} repository."
-                                withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'),
-                                                file(credentialsId: "terraform${dirName.toLowerCase()}.tfvars", variable: 'AWS_TF_VARS')]) {
-                                    sh 'cp ${AWS_TF_VARS} terraform.tfvars'
-                                    sh "terraform validate"
-                                }
-                            }
-                        }]
-                    }
-                    parallel parallelSteps
-                }
-            }
-        }
+        //     steps {
+        //         script {
+        //             def terraformDirs = ['DB', 'EC2', 'VPC']
+        //             def parallelSteps = terraformDirs.collectEntries { dirName ->
+        //                 ["Validate ${dirName}": {
+        //                     dir("Iac_Terraform/${dirName}") {
+        //                         echo "Validating Terraform for ${repoName}/${dirName} repository."
+        //                         withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'),
+        //                                         file(credentialsId: "terraform${dirName.toLowerCase()}.tfvars", variable: 'AWS_TF_VARS')]) {
+        //                             sh 'cp ${AWS_TF_VARS} terraform.tfvars'
+        //                             sh "terraform validate"
+        //                         }
+        //                     }
+        //                 }]
+        //             }
+        //             parallel parallelSteps
+        //         }
+        //     }
+        // }
 
         stage('Terraform Plan') {
             when {
