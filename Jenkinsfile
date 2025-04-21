@@ -78,7 +78,7 @@ pipeline {
 
             steps {
                 script {
-                    def terraformDirs = ['DB', 'VPC']
+                    def terraformDirs = ['DB', 'EC2', 'VPC']
                     def parallelSteps = terraformDirs.collectEntries { dirName ->
                         ["Validate ${dirName}": {
                             dir("Iac_Terraform/${dirName}") {
@@ -103,7 +103,7 @@ pipeline {
 
             steps {
                 script {
-                    def terraformDirs = ['DB', 'VPC']
+                    def terraformDirs = ['DB', 'EC2', 'VPC']
                     def parallelSteps = terraformDirs.collectEntries { dirName ->
                         ["Plan ${dirName}": {
                             dir("Iac_Terraform/${dirName}") {
@@ -111,7 +111,7 @@ pipeline {
                                 withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CREDENTIALS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'),
                                                 file(credentialsId: "terraform${dirName.toLowerCase()}.tfvars", variable: 'AWS_TF_VARS')]) {
                                     sh 'cp ${AWS_TF_VARS} terraform.tfvars'
-                                    sh 'terraform plan -var-file=terraform.tfvars -out=tfplan'
+                                    sh 'terraform plan -var-file=terraform.tfvars -out=${dirName}.tfplan'
                                 }
                             }
                         }]
@@ -121,7 +121,7 @@ pipeline {
                     echo "Terraform plan created for ${repoName} repository."
                     echo "Storing Terraform plan in the workspace."
                     // Archive the Terraform plan for later use
-                    archiveArtifacts artifacts: 'Iac_Terraform/*/tfplan', fingerprint: true
+                    archiveArtifacts artifacts: 'Iac_Terraform/*/.tfplan', fingerprint: true
                 }
             }
         }
